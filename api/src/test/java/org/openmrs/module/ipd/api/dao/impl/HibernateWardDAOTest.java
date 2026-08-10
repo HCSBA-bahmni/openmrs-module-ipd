@@ -57,5 +57,6 @@ public class HibernateWardDAOTest {
 
     private void assertSelectedEntitiesAreGrouped(String query) {
         assertTrue(query.contains("GROUP BY assignment, careTeam, v"));
+        assertTrue(query.contains("LEFT JOIN org.openmrs.Encounter e on e.visit = v"));
     }
 }

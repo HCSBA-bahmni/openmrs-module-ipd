@@ -17,3 +17,8 @@ when the ward contains admitted patients.
 
 Regression tests capture the generated HQL for the list and search paths so the
 three selected entities cannot be omitted silently.
+
+The encounter association is optional in these queries. A valid active bed
+assignment and visit must remain visible before the first clinical encounter is
+created, so both paths use a `LEFT JOIN` for `Encounter`. An inner join makes the
+ward summary and patient list disagree for newly admitted patients.
