@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -56,7 +57,10 @@ public class HibernateWardDAOTest {
     }
 
     private void assertSelectedEntitiesAreGrouped(String query) {
-        assertTrue(query.contains("GROUP BY assignment, careTeam, v"));
-        assertTrue(query.contains("LEFT JOIN org.openmrs.Encounter e on e.visit = v"));
+        assertTrue(query.contains("GROUP BY assignment, careTeam"));
+        assertTrue(query.contains("e.visit = assignment.encounter.visit"));
+        assertTrue(query.contains("careTeam.visit = assignment.encounter.visit"));
+        assertFalse(query.contains("v.patient = assignment.patient"));
+        assertFalse(query.contains("v.stopDatetime is null"));
     }
 }

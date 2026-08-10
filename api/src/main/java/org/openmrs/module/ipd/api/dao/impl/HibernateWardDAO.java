@@ -21,7 +21,7 @@ import java.util.List;
 public class HibernateWardDAO implements WardDAO {
 
     private static final Logger log = LoggerFactory.getLogger(HibernateWardDAO.class);
-    private static final String ADMITTED_PATIENT_GROUP_BY = " GROUP BY assignment, careTeam, v ";
+    private static final String ADMITTED_PATIENT_GROUP_BY = " GROUP BY assignment, careTeam ";
 
     private SessionFactory sessionFactory;
 
@@ -52,15 +52,14 @@ public class HibernateWardDAO implements WardDAO {
             String queryString = "select NEW org.openmrs.module.ipd.api.model.AdmittedPatient(assignment," +
                     "(COUNT(DISTINCT o.orderId) - COUNT (DISTINCT s.order.orderId)), careTeam)" +
                     "from org.openmrs.module.bedmanagement.entity.BedPatientAssignment assignment " +
-                    "JOIN org.openmrs.Visit v on v.patient = assignment.patient " +
-                    "LEFT JOIN org.openmrs.Encounter e on e.visit = v " +
-                    "LEFT JOIN CareTeam careTeam on careTeam.visit = v " +
+                    "LEFT JOIN org.openmrs.Encounter e on e.visit = assignment.encounter.visit " +
+                    "LEFT JOIN CareTeam careTeam on careTeam.visit = assignment.encounter.visit " +
                     "JOIN org.openmrs.module.bedmanagement.entity.BedLocationMapping locmap on locmap.bed = assignment.bed " +
                     "JOIN org.openmrs.Location l on locmap.location = l " +
                     "LEFT JOIN careTeam.participants ctp ON ctp.voided = 0 " +
                     "LEFT JOIN org.openmrs.Order o on o.encounter = e and o.dateStopped is null and o.action!='DISCONTINUE' and o.careSetting.careSettingId = 2 " +
                     "LEFT JOIN Slot s on s.order = o " +
-                    "where assignment.endDatetime is null and v.stopDatetime is null ";
+                    "where assignment.endDatetime is null ";
 
             if(location != null){
                 queryString += "and l.parentLocation = :location ";
@@ -105,12 +104,11 @@ public class HibernateWardDAO implements WardDAO {
         Session session = this.sessionFactory.getCurrentSession();
         try {
             Query totalPatientsQuery = session.createQuery(
-                 "SELECT COUNT(assignment) " +
+                 "SELECT COUNT(DISTINCT assignment) " +
                     "FROM org.openmrs.module.bedmanagement.entity.BedPatientAssignment assignment " +
                     "JOIN org.openmrs.module.bedmanagement.entity.BedLocationMapping locmap ON locmap.bed = assignment.bed " +
                     "JOIN org.openmrs.Location l ON locmap.location = l " +
-                    "JOIN org.openmrs.Visit v ON v.patient = assignment.patient " +
-                    "WHERE assignment.endDatetime IS NULL AND v.stopDatetime IS NULL AND l.parentLocation = :location"
+                    "WHERE assignment.endDatetime IS NULL AND l.parentLocation = :location"
             );
 
             totalPatientsQuery.setParameter("location", location);
@@ -122,10 +120,9 @@ public class HibernateWardDAO implements WardDAO {
                     "FROM org.openmrs.module.bedmanagement.entity.BedPatientAssignment assignment " +
                     "JOIN org.openmrs.module.bedmanagement.entity.BedLocationMapping locmap ON locmap.bed = assignment.bed " +
                     "JOIN org.openmrs.Location l ON locmap.location = l " +
-                    "JOIN org.openmrs.Visit v ON v.patient = assignment.patient " +
-                    "LEFT JOIN CareTeam careTeam ON careTeam.patient = v.patient " +
+                    "LEFT JOIN CareTeam careTeam ON careTeam.visit = assignment.encounter.visit " +
                     "LEFT JOIN careTeam.participants ctp ON ctp.voided = 0 " +
-                    "WHERE assignment.endDatetime IS NULL AND v.stopDatetime IS NULL AND l.parentLocation = :location " +
+                    "WHERE assignment.endDatetime IS NULL AND l.parentLocation = :location " +
                     "AND (ctp.provider = :provider AND :dateTime BETWEEN ctp.startTime AND ctp.endTime)"
             );
 
@@ -151,11 +148,10 @@ public class HibernateWardDAO implements WardDAO {
             String selectQuery = "select NEW org.openmrs.module.ipd.api.model.AdmittedPatient(assignment, " +
                     "(COUNT(DISTINCT o.orderId) - COUNT(DISTINCT s.order.orderId)), careTeam) " +
                     "from org.openmrs.module.bedmanagement.entity.BedPatientAssignment assignment " +
-                    "JOIN org.openmrs.Visit v on v.patient = assignment.patient " +
                     "JOIN org.openmrs.Patient p on assignment.patient = p " +
                     "JOIN org.openmrs.Person pr on pr.personId = p.patientId " +
-                    "LEFT JOIN org.openmrs.Encounter e on e.visit = v " +
-                    "LEFT JOIN CareTeam careTeam on careTeam.visit = v " +
+                    "LEFT JOIN org.openmrs.Encounter e on e.visit = assignment.encounter.visit " +
+                    "LEFT JOIN CareTeam careTeam on careTeam.visit = assignment.encounter.visit " +
                     "JOIN org.openmrs.module.bedmanagement.entity.BedLocationMapping locmap on locmap.bed = assignment.bed " +
                     "JOIN org.openmrs.Location l on locmap.location = l " +
                     "LEFT JOIN org.openmrs.Order o on o.encounter = e and o.dateStopped is null and o.action!='DISCONTINUE' and o.careSetting.careSettingId = 2 " +
@@ -185,7 +181,7 @@ public class HibernateWardDAO implements WardDAO {
 
 
     private void generateSQLSearchConditions(List<String> searchKeys, StringBuilder additionalJoins, StringBuilder whereClause, String searchValue) {
-        whereClause.append("where (assignment.endDatetime is null and v.stopDatetime is null and l.parentLocation = :location)");
+        whereClause.append("where (assignment.endDatetime is null and l.parentLocation = :location)");
         if (searchKeys != null && !searchKeys.isEmpty()) {
             whereClause.append(" and (");
             for (int i = 0; i < searchKeys.size(); i++) {
