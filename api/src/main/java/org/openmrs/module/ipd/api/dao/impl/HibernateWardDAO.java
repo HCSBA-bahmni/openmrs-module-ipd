@@ -21,6 +21,7 @@ import java.util.List;
 public class HibernateWardDAO implements WardDAO {
 
     private static final Logger log = LoggerFactory.getLogger(HibernateWardDAO.class);
+    private static final String ADMITTED_PATIENT_GROUP_BY = " GROUP BY assignment, careTeam, v ";
 
     private SessionFactory sessionFactory;
 
@@ -73,11 +74,9 @@ public class HibernateWardDAO implements WardDAO {
                 queryString += "and :dateTime between ctp.startTime and ctp.endTime ";
             }
 
-            String groupBy = " GROUP BY assignment.patient, v ";
-
             String orderBy = generateOrderByClauseForSorting(sortBy);
 
-            String finalQuery = queryString + groupBy + orderBy;
+            String finalQuery = queryString + ADMITTED_PATIENT_GROUP_BY + orderBy;
 
             Query query = session.createQuery(finalQuery);
 
@@ -96,7 +95,7 @@ public class HibernateWardDAO implements WardDAO {
             return query.getResultList();
         }
         catch (Exception ex){
-            log.error("Exception at WardDAO getAdmittedPatients ",ex.getStackTrace());
+            log.error("Exception at WardDAO getAdmittedPatients ", ex);
         }
         return new ArrayList<>();
     }
@@ -168,13 +167,10 @@ public class HibernateWardDAO implements WardDAO {
             StringBuilder whereClause = new StringBuilder();
             generateSQLSearchConditions(searchKeys, additionalJoins, whereClause, searchValue);
 
-            // Construct group by clause
-            String groupBy = " GROUP BY assignment.patient, v ";
-
             String orderBy = generateOrderByClauseForSorting(sortBy);
 
             // Create query
-            Query query = session.createQuery(selectQuery + additionalJoins + whereClause + groupBy + orderBy);
+            Query query = session.createQuery(selectQuery + additionalJoins + whereClause + ADMITTED_PATIENT_GROUP_BY + orderBy);
 
             // Set parameters
             query.setParameter("location", location);
@@ -182,7 +178,7 @@ public class HibernateWardDAO implements WardDAO {
 
             return query.getResultList();
         } catch (Exception ex) {
-            log.error("Exception at WardDAO searching ", ex.getMessage());
+            log.error("Exception at WardDAO searching ", ex);
             return new ArrayList<>();
         }
     }
