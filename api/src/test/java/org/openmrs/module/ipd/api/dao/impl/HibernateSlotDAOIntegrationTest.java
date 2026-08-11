@@ -5,6 +5,7 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.openmrs.Concept;
 import org.openmrs.DrugOrder;
+import org.openmrs.Encounter;
 import org.openmrs.Order;
 import org.openmrs.Patient;
 import org.openmrs.Visit;
@@ -429,6 +430,57 @@ public class HibernateSlotDAOIntegrationTest extends BaseIntegrationTest {
         sessionFactory.getCurrentSession().delete(savedSchedule);
         sessionFactory.getCurrentSession().delete(visit);
 
+    }
+
+    @Test
+    public void shouldFindMedicationSlotByOrderVisitWhenLegacyScheduleHasDifferentVisit() {
+        DrugOrder drugOrder = (DrugOrder) Context.getOrderService().getOrderByUuid("921de0a3-05c4-444a-be03-e01b4c4b9142");
+        Visit orderVisit = new Visit();
+        orderVisit.setPatient(drugOrder.getPatient());
+        orderVisit.setVisitType(Context.getVisitService().getAllVisitTypes().get(0));
+        orderVisit.setStartDatetime(new Date(drugOrder.getEncounter().getEncounterDatetime().getTime() - (2 * 24 * 60 * 60 * 1000L)));
+        orderVisit = Context.getVisitService().saveVisit(orderVisit);
+        Encounter orderEncounter = drugOrder.getEncounter();
+        orderEncounter.setVisit(orderVisit);
+        Context.getEncounterService().saveEncounter(orderEncounter);
+        Visit legacyScheduleVisit = new Visit();
+        legacyScheduleVisit.setPatient(drugOrder.getPatient());
+        legacyScheduleVisit.setVisitType(orderVisit.getVisitType());
+        legacyScheduleVisit.setStartDatetime(new Date(orderVisit.getStartDatetime().getTime() + (24 * 60 * 60 * 1000L)));
+        legacyScheduleVisit = Context.getVisitService().saveVisit(legacyScheduleVisit);
+
+        Reference patientReference = new Reference(Patient.class.getTypeName(), "legacy-schedule-patient");
+        Reference providerReference = new Reference(Patient.class.getTypeName(), "legacy-schedule-provider");
+        Concept serviceType = Context.getConceptService().getConceptByName("UNKNOWN");
+        LocalDateTime slotStartTime = LocalDateTime.now().plusHours(1);
+
+        Schedule schedule = new Schedule();
+        schedule.setSubject(patientReference);
+        schedule.setActor(providerReference);
+        schedule.setStartDate(slotStartTime);
+        schedule.setEndDate(slotStartTime.plusDays(1));
+        schedule.setVisit(legacyScheduleVisit);
+        schedule.setServiceType(serviceType);
+        Schedule savedSchedule = scheduleDAO.saveSchedule(schedule);
+
+        Slot slot = new Slot();
+        slot.setSchedule(savedSchedule);
+        slot.setServiceType(serviceType);
+        slot.setStartDateTime(slotStartTime);
+        slot.setOrder(drugOrder);
+        Slot savedSlot = slotDAO.saveSlot(slot);
+
+        Assertions.assertEquals(1, slotDAO.getSlotsBySubjectReferenceIdAndForTheGivenTimeFrame(
+                patientReference, LocalDateTime.now(), LocalDateTime.now().plusHours(2), orderVisit, serviceType).size());
+        Assertions.assertEquals(1, slotDAO.getSlotsBySubjectIncludingAdministeredTimeFrame(
+                patientReference, LocalDateTime.now(), LocalDateTime.now().plusHours(2), orderVisit).size());
+
+        sessionFactory.getCurrentSession().delete(savedSlot);
+        sessionFactory.getCurrentSession().delete(savedSchedule);
+        orderEncounter.setVisit(null);
+        Context.getEncounterService().saveEncounter(orderEncounter);
+        sessionFactory.getCurrentSession().delete(legacyScheduleVisit);
+        sessionFactory.getCurrentSession().delete(orderVisit);
     }
 
     @Test

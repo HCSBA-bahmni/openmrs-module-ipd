@@ -64,13 +64,13 @@ public class IPDScheduleServiceImpl implements IPDScheduleService {
     @Override
     public Schedule saveMedicationSchedule(ScheduleMedicationRequest scheduleMedicationRequest) {
         Patient patient = patientService.getPatientByUuid(scheduleMedicationRequest.getPatientUuid());
-        Visit visit = visitService.getActiveVisitsByPatient(patient).get(0);
+        DrugOrder order = (DrugOrder) orderService.getOrderByUuid(scheduleMedicationRequest.getOrderUuid());
+        Visit visit = getVisitForMedicationOrder(order, patient);
         Schedule savedSchedule = scheduleService.getScheduleByVisit(visit);
         if(savedSchedule == null || savedSchedule.getId() == null) {
             Schedule schedule = scheduleFactory.createScheduleForMedicationFrom(scheduleMedicationRequest, visit);
             savedSchedule = scheduleService.saveSchedule(schedule);
         }
-        DrugOrder order = (DrugOrder) orderService.getOrderByUuid(scheduleMedicationRequest.getOrderUuid());
         ServiceType serviceType = scheduleMedicationRequest.getServiceType() !=null ? scheduleMedicationRequest.getServiceType() : ServiceType.MEDICATION_REQUEST;
         if(serviceType.equals(ServiceType.MEDICATION_REQUEST)){
             List<Slot> existingSlots = getMedicationSlots(patient.getUuid(),ServiceType.MEDICATION_REQUEST,new ArrayList<>(Arrays.asList(new String[]{order.getUuid()})));
@@ -87,6 +87,17 @@ public class IPDScheduleServiceImpl implements IPDScheduleService {
         }
 
         return savedSchedule;
+    }
+
+    private Visit getVisitForMedicationOrder(DrugOrder order, Patient patient) {
+        if (order != null && order.getEncounter() != null && order.getEncounter().getVisit() != null) {
+            return order.getEncounter().getVisit();
+        }
+        List<Visit> activeVisits = visitService.getActiveVisitsByPatient(patient);
+        if (activeVisits == null || activeVisits.isEmpty()) {
+            throw new IllegalStateException("No active visit found for medication schedule");
+        }
+        return activeVisits.get(0);
     }
 
     @Override

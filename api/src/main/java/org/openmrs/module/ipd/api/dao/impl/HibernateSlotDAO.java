@@ -102,7 +102,13 @@ public class HibernateSlotDAO implements SlotDAO {
     @Override
     public List<Slot> getSlotsBySubjectReferenceIdAndForTheGivenTimeFrame(Reference subject, LocalDateTime localStartDate, LocalDateTime localEndDate, Visit visit, Concept serviceType){
         Query query = sessionFactory.getCurrentSession()
-                .createQuery("FROM Slot slot WHERE slot.schedule.subject=:subject and ((slot.startDateTime BETWEEN :startDate and :endDate) or (slot.serviceType = :serviceType)) and slot.voided=0 and slot.schedule.visit=:visit");
+                .createQuery("SELECT slot FROM Slot slot " +
+                        "LEFT JOIN slot.order slotOrder " +
+                        "LEFT JOIN slotOrder.encounter slotEncounter " +
+                        "WHERE slot.schedule.subject=:subject " +
+                        "and ((slot.startDateTime BETWEEN :startDate and :endDate) or (slot.serviceType = :serviceType)) " +
+                        "and slot.voided=0 " +
+                        "and (slot.schedule.visit=:visit or slotEncounter.visit=:visit)");
 
         query.setParameter("subject", subject);
         query.setParameter("startDate", localStartDate);
@@ -117,8 +123,11 @@ public class HibernateSlotDAO implements SlotDAO {
 	public List<Slot> getSlotsBySubjectIncludingAdministeredTimeFrame(Reference subject, LocalDateTime localStartDate, LocalDateTime localEndDate, Visit visit) {
 		Query query = sessionFactory.getCurrentSession()
 				.createQuery("SELECT slot FROM Slot slot " +
+						"LEFT JOIN slot.order slotOrder " +
+						"LEFT JOIN slotOrder.encounter slotEncounter " +
 						"LEFT JOIN slot.medicationAdministration medAdmin " +
-						"WHERE (slot.schedule.subject = :subject) AND slot.voided = 0 AND slot.schedule.visit=:visit AND " +
+						"WHERE (slot.schedule.subject = :subject) AND slot.voided = 0 " +
+						"AND (slot.schedule.visit=:visit or slotEncounter.visit=:visit) AND " +
 						"(((slot.startDateTime BETWEEN :startDateTime AND :endDateTime) AND " +
 						"(medAdmin.administeredDateTime BETWEEN :startDate AND :endDate or medAdmin is null)) OR " +
 						"(medAdmin is not null AND " +
