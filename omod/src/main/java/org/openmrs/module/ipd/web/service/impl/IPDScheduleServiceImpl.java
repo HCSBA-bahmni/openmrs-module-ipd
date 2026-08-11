@@ -1,7 +1,6 @@
 package org.openmrs.module.ipd.web.service.impl;
 
 import org.openmrs.*;
-import org.openmrs.api.ConceptService;
 import org.openmrs.api.OrderService;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.VisitService;
@@ -15,6 +14,7 @@ import org.openmrs.module.ipd.api.service.ReferenceService;
 import org.openmrs.module.ipd.api.service.ScheduleService;
 import org.openmrs.module.ipd.api.service.SlotService;
 import org.openmrs.module.ipd.api.util.DateTimeUtil;
+import org.openmrs.module.ipd.api.util.ServiceTypeConceptResolver;
 import org.openmrs.module.ipd.web.contract.ScheduleMedicationRequest;
 import org.openmrs.module.ipd.web.factory.ScheduleFactory;
 import org.openmrs.module.ipd.web.factory.SlotFactory;
@@ -41,20 +41,20 @@ public class IPDScheduleServiceImpl implements IPDScheduleService {
     private final SlotFactory slotFactory;
     private final SlotService slotService;
     private final SlotTimeCreationService slotTimeCreationService;
-    private final ConceptService conceptService;
+    private final ServiceTypeConceptResolver serviceTypeConceptResolver;
     private final ReferenceService referenceService;
     private final VisitService visitService;
     private final PatientService patientService;
     private final OrderService orderService;
 
     @Autowired
-    public IPDScheduleServiceImpl(ScheduleService scheduleService, ScheduleFactory scheduleFactory, SlotFactory slotFactory, SlotService slotService, SlotTimeCreationService slotTimeCreationService, ConceptService conceptService, ReferenceService referenceService, VisitService visitService, PatientService patientService, OrderService orderService) {
+    public IPDScheduleServiceImpl(ScheduleService scheduleService, ScheduleFactory scheduleFactory, SlotFactory slotFactory, SlotService slotService, SlotTimeCreationService slotTimeCreationService, ServiceTypeConceptResolver serviceTypeConceptResolver, ReferenceService referenceService, VisitService visitService, PatientService patientService, OrderService orderService) {
         this.scheduleService = scheduleService;
         this.scheduleFactory = scheduleFactory;
         this.slotFactory = slotFactory;
         this.slotService = slotService;
         this.slotTimeCreationService = slotTimeCreationService;
-        this.conceptService = conceptService;
+        this.serviceTypeConceptResolver = serviceTypeConceptResolver;
         this.referenceService = referenceService;
         this.visitService = visitService;
         this.patientService = patientService;
@@ -91,7 +91,7 @@ public class IPDScheduleServiceImpl implements IPDScheduleService {
 
     @Override
     public List<Slot> getMedicationSlots(String patientUuid, ServiceType serviceType, LocalDate forDate) {
-        Concept concept = conceptService.getConceptByName(serviceType.conceptName());
+        Concept concept = serviceTypeConceptResolver.resolve(serviceType);
         Optional<Reference> subjectReference = referenceService.getReferenceByTypeAndTargetUUID(Patient.class.getTypeName(), patientUuid);
         if(!subjectReference.isPresent())
             return Collections.emptyList();
@@ -100,7 +100,7 @@ public class IPDScheduleServiceImpl implements IPDScheduleService {
 
     @Override
     public List<Slot> getMedicationSlots(String patientUuid, ServiceType serviceType) {
-        Concept concept = conceptService.getConceptByName(serviceType.conceptName());
+        Concept concept = serviceTypeConceptResolver.resolve(serviceType);
         Optional<Reference> subjectReference = referenceService.getReferenceByTypeAndTargetUUID(Patient.class.getTypeName(), patientUuid);
         if(!subjectReference.isPresent())
             return Collections.emptyList();
@@ -109,7 +109,7 @@ public class IPDScheduleServiceImpl implements IPDScheduleService {
 
     @Override
     public List<Slot> getMedicationSlots(String patientUuid, ServiceType serviceType, List<String> orderUuids) {
-        Concept concept = conceptService.getConceptByName(serviceType.conceptName());
+        Concept concept = serviceTypeConceptResolver.resolve(serviceType);
         Optional<Reference> subjectReference = referenceService.getReferenceByTypeAndTargetUUID(Patient.class.getTypeName(), patientUuid);
         if(!subjectReference.isPresent())
             return Collections.emptyList();
@@ -167,8 +167,8 @@ public class IPDScheduleServiceImpl implements IPDScheduleService {
                     .distinct()
                     .collect(Collectors.toList());
             List<Concept> serviceTypes = new ArrayList<>();
-            serviceTypes.add(Context.getConceptService().getConceptByName(ServiceType.MEDICATION_REQUEST.conceptName()));
-            serviceTypes.add(Context.getConceptService().getConceptByName(ServiceType.AS_NEEDED_MEDICATION_REQUEST.conceptName()));
+            serviceTypes.add(serviceTypeConceptResolver.resolve(ServiceType.MEDICATION_REQUEST));
+            serviceTypes.add(serviceTypeConceptResolver.resolve(ServiceType.AS_NEEDED_MEDICATION_REQUEST));
 
             slotsDuration = slotService.getSlotDurationForPatientsByOrder(orders, serviceTypes);
         }

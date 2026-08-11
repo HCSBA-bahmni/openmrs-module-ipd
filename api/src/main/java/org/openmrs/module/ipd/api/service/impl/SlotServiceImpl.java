@@ -4,7 +4,6 @@ import org.openmrs.Concept;
 import org.openmrs.Order;
 import org.openmrs.Visit;
 import org.openmrs.api.APIException;
-import org.openmrs.api.ConceptService;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.impl.BaseOpenmrsService;
 import org.openmrs.module.ipd.api.dao.SlotDAO;
@@ -12,6 +11,7 @@ import org.openmrs.module.ipd.api.model.Reference;
 import org.openmrs.module.ipd.api.model.ServiceType;
 import org.openmrs.module.ipd.api.model.Slot;
 import org.openmrs.module.ipd.api.service.SlotService;
+import org.openmrs.module.ipd.api.util.ServiceTypeConceptResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,13 +31,13 @@ public class SlotServiceImpl extends BaseOpenmrsService implements SlotService {
 	private static final Logger log = LoggerFactory.getLogger(SlotServiceImpl.class);
 
 	private SlotDAO slotDAO;
-	private ConceptService conceptService;
+	private ServiceTypeConceptResolver serviceTypeConceptResolver;
 
 	public void setSlotDAO(SlotDAO slotDAO) {
 		this.slotDAO = slotDAO;
 	}
-	public void setConceptService(ConceptService conceptService) {
-		this.conceptService = conceptService;
+	public void setServiceTypeConceptResolver(ServiceTypeConceptResolver serviceTypeConceptResolver) {
+		this.serviceTypeConceptResolver = serviceTypeConceptResolver;
 	}
 
 	@Override
@@ -88,7 +88,7 @@ public class SlotServiceImpl extends BaseOpenmrsService implements SlotService {
 	}
     @Override
     public List<Slot> getSlotsBySubjectReferenceIdAndForTheGivenTimeFrame(Reference subject, LocalDateTime localStartDate, LocalDateTime localEndDate, Visit visit){
-		Concept asNeededPlaceholderServiceType = conceptService.getConceptByName(ServiceType.AS_NEEDED_PLACEHOLDER.conceptName());
+		Concept asNeededPlaceholderServiceType = serviceTypeConceptResolver.resolve(ServiceType.AS_NEEDED_PLACEHOLDER);
 		return slotDAO.getSlotsBySubjectReferenceIdAndForTheGivenTimeFrame(subject, localStartDate, localEndDate, visit, asNeededPlaceholderServiceType);
 	}
 

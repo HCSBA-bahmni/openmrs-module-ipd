@@ -19,6 +19,7 @@ import org.openmrs.module.ipd.api.model.Slot;
 import org.openmrs.module.ipd.api.model.*;
 import org.openmrs.module.ipd.api.service.ReferenceService;
 import org.openmrs.module.ipd.api.service.SlotService;
+import org.openmrs.module.ipd.api.util.ServiceTypeConceptResolver;
 import org.openmrs.module.ipd.web.service.IPDVisitService;
 import org.openmrs.module.ipd.web.service.IPDScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +40,7 @@ public class IPDVisitServiceImpl implements IPDVisitService {
     private SlotTimeCreationService slotTimeCreationService;
     private BahmniObsService bahmniObsService;
     private ConceptService conceptService;
+    private ServiceTypeConceptResolver serviceTypeConceptResolver;
     private BahmniDrugOrderMapper bahmniDrugOrderMapper;
     private ReferenceService referenceService;
     private VisitService visitService;
@@ -50,6 +52,7 @@ public class IPDVisitServiceImpl implements IPDVisitService {
                                SlotTimeCreationService slotTimeCreationService,
                                BahmniObsService bahmniObsService,
                                ConceptService conceptService,
+                               ServiceTypeConceptResolver serviceTypeConceptResolver,
                                ReferenceService referenceService,
                                VisitService visitService,
                                SlotService slotService) {
@@ -58,6 +61,7 @@ public class IPDVisitServiceImpl implements IPDVisitService {
         this.slotTimeCreationService = slotTimeCreationService;
         this.bahmniObsService = bahmniObsService;
         this.conceptService = conceptService;
+        this.serviceTypeConceptResolver = serviceTypeConceptResolver;
         this.bahmniDrugOrderMapper = new BahmniDrugOrderMapper();
         this.referenceService = referenceService;
         this.visitService = visitService;
@@ -162,7 +166,7 @@ public class IPDVisitServiceImpl implements IPDVisitService {
     @Override
     public List<Slot> getMedicationSlots(String visitUuid, ServiceType serviceType) {
         Visit visit = visitService.getVisitByUuid(visitUuid);
-        Concept concept = conceptService.getConceptByName(serviceType.conceptName());
+        Concept concept = serviceTypeConceptResolver.resolve(serviceType);
         Optional<Reference> subjectReference = referenceService.getReferenceByTypeAndTargetUUID(Patient.class.getTypeName(), visit.getPatient().getUuid());
 
         if(!subjectReference.isPresent())

@@ -14,7 +14,9 @@ import org.openmrs.Visit;
 import org.openmrs.module.ipd.api.dao.SlotDAO;
 import org.openmrs.module.ipd.api.model.Reference;
 import org.openmrs.module.ipd.api.model.Schedule;
+import org.openmrs.module.ipd.api.model.ServiceType;
 import org.openmrs.module.ipd.api.model.Slot;
+import org.openmrs.module.ipd.api.util.ServiceTypeConceptResolver;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -31,6 +33,9 @@ public class SlotServiceImplTest {
 
     @Mock
     private SlotDAO slotDAO;
+
+    @Mock
+    private ServiceTypeConceptResolver serviceTypeConceptResolver;
 
     @Test
     public void shouldInvokeSaveSlotWithGivenSlot() {
@@ -138,6 +143,24 @@ public class SlotServiceImplTest {
         slotService.getSlotsBySubjectReferenceIncludingAdministeredTimeFrame(patientReference,startTime,endTime,visit);
 
         Mockito.verify(slotDAO, Mockito.times(1)).getSlotsBySubjectIncludingAdministeredTimeFrame(patientReference, startTime, endTime, visit);
+    }
+
+    @Test
+    public void shouldResolveAsNeededPlaceholderUsingMetadataLocaleForTimeFrameQuery() {
+        List<Slot> slots = new ArrayList<>();
+        LocalDateTime startTime = LocalDateTime.now();
+        LocalDateTime endTime = startTime.plusHours(8);
+        Reference patientReference = new Reference(Patient.class.getTypeName(), "patientUuid");
+        Visit visit = new Visit(123);
+        Concept asNeededPlaceholder = new Concept(152);
+
+        Mockito.when(serviceTypeConceptResolver.resolve(ServiceType.AS_NEEDED_PLACEHOLDER)).thenReturn(asNeededPlaceholder);
+        Mockito.when(slotDAO.getSlotsBySubjectReferenceIdAndForTheGivenTimeFrame(patientReference, startTime, endTime, visit, asNeededPlaceholder)).thenReturn(slots);
+
+        slotService.getSlotsBySubjectReferenceIdAndForTheGivenTimeFrame(patientReference, startTime, endTime, visit);
+
+        Mockito.verify(serviceTypeConceptResolver).resolve(ServiceType.AS_NEEDED_PLACEHOLDER);
+        Mockito.verify(slotDAO).getSlotsBySubjectReferenceIdAndForTheGivenTimeFrame(patientReference, startTime, endTime, visit, asNeededPlaceholder);
     }
 
     @Test

@@ -32,8 +32,11 @@
     <!-- End DAO Beans -->
 
     <!-- Service Beans -->
-    <bean id="slotServiceImpl" class="org.openmrs.module.ipd.api.service.impl.SlotServiceImpl">
+    <bean id="serviceTypeConceptResolver" class="org.openmrs.module.ipd.api.util.ServiceTypeConceptResolver">
         <property name="conceptService" ref="conceptService"/>
+    </bean>
+    <bean id="slotServiceImpl" class="org.openmrs.module.ipd.api.service.impl.SlotServiceImpl">
+        <property name="serviceTypeConceptResolver" ref="serviceTypeConceptResolver"/>
         <property name="slotDAO" ref="hibernateSlotDAO"/>
     </bean>
     <bean id="slotService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
