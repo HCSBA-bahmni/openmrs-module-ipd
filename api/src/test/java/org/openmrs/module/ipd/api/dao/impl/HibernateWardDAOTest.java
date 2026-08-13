@@ -5,15 +5,19 @@ import org.hibernate.SessionFactory;
 import org.hibernate.query.Query;
 import org.junit.Before;
 import org.junit.Test;
+import org.openmrs.Location;
+import org.openmrs.Provider;
 import org.mockito.ArgumentCaptor;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -50,6 +54,17 @@ public class HibernateWardDAOTest {
         assertSelectedEntitiesAreGrouped(captureQuery());
     }
 
+    @Test
+    public void shouldExcludeClosedVisitsFromWardSummaries() {
+        wardDAO.getWardPatientSummary(mock(Location.class), mock(Provider.class), new Date());
+
+        ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
+        verify(session, times(2)).createQuery(queryCaptor.capture());
+        List<String> queries = queryCaptor.getAllValues();
+        assertTrue(queries.get(0).contains("assignment.encounter.visit.stopDatetime IS NULL"));
+        assertTrue(queries.get(1).contains("assignment.encounter.visit.stopDatetime IS NULL"));
+    }
+
     private String captureQuery() {
         ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
         verify(session).createQuery(queryCaptor.capture());
@@ -60,7 +75,6 @@ public class HibernateWardDAOTest {
         assertTrue(query.contains("GROUP BY assignment, careTeam"));
         assertTrue(query.contains("e.visit = assignment.encounter.visit"));
         assertTrue(query.contains("careTeam.visit = assignment.encounter.visit"));
-        assertFalse(query.contains("v.patient = assignment.patient"));
-        assertFalse(query.contains("v.stopDatetime is null"));
+        assertTrue(query.contains("assignment.encounter.visit.stopDatetime is null"));
     }
 }

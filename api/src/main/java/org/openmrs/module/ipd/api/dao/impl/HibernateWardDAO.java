@@ -59,7 +59,8 @@ public class HibernateWardDAO implements WardDAO {
                     "LEFT JOIN careTeam.participants ctp ON ctp.voided = 0 " +
                     "LEFT JOIN org.openmrs.Order o on o.encounter = e and o.dateStopped is null and o.action!='DISCONTINUE' and o.careSetting.careSettingId = 2 " +
                     "LEFT JOIN Slot s on s.order = o " +
-                    "where assignment.endDatetime is null ";
+                    "where assignment.endDatetime is null " +
+                    "and assignment.encounter.visit.stopDatetime is null ";
 
             if(location != null){
                 queryString += "and l.parentLocation = :location ";
@@ -108,7 +109,9 @@ public class HibernateWardDAO implements WardDAO {
                     "FROM org.openmrs.module.bedmanagement.entity.BedPatientAssignment assignment " +
                     "JOIN org.openmrs.module.bedmanagement.entity.BedLocationMapping locmap ON locmap.bed = assignment.bed " +
                     "JOIN org.openmrs.Location l ON locmap.location = l " +
-                    "WHERE assignment.endDatetime IS NULL AND l.parentLocation = :location"
+                    "WHERE assignment.endDatetime IS NULL " +
+                    "AND assignment.encounter.visit.stopDatetime IS NULL " +
+                    "AND l.parentLocation = :location"
             );
 
             totalPatientsQuery.setParameter("location", location);
@@ -122,7 +125,9 @@ public class HibernateWardDAO implements WardDAO {
                     "JOIN org.openmrs.Location l ON locmap.location = l " +
                     "LEFT JOIN CareTeam careTeam ON careTeam.visit = assignment.encounter.visit " +
                     "LEFT JOIN careTeam.participants ctp ON ctp.voided = 0 " +
-                    "WHERE assignment.endDatetime IS NULL AND l.parentLocation = :location " +
+                    "WHERE assignment.endDatetime IS NULL " +
+                    "AND assignment.encounter.visit.stopDatetime IS NULL " +
+                    "AND l.parentLocation = :location " +
                     "AND (ctp.provider = :provider AND :dateTime BETWEEN ctp.startTime AND ctp.endTime)"
             );
 
@@ -181,7 +186,9 @@ public class HibernateWardDAO implements WardDAO {
 
 
     private void generateSQLSearchConditions(List<String> searchKeys, StringBuilder additionalJoins, StringBuilder whereClause, String searchValue) {
-        whereClause.append("where (assignment.endDatetime is null and l.parentLocation = :location)");
+        whereClause.append("where (assignment.endDatetime is null " +
+                "and assignment.encounter.visit.stopDatetime is null " +
+                "and l.parentLocation = :location)");
         if (searchKeys != null && !searchKeys.isEmpty()) {
             whereClause.append(" and (");
             for (int i = 0; i < searchKeys.size(); i++) {

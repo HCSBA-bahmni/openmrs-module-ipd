@@ -11,5 +11,6 @@ import java.util.List;
 @NoArgsConstructor
 public class CareTeamRequest {
     private String patientUuid;
+    private String visitUuid;
     private List<CareTeamParticipantRequest> careTeamParticipantsRequest;
 }
